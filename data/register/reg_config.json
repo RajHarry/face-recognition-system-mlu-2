@@ -1,0 +1,22 @@
+[
+    {
+        "empId": "123",
+        "empName": "Raghava",
+        "imagePath": "data/register/images/Raghava/Raghava-1.png"
+    },
+    {
+        "empId": "345",
+        "empName": "Rohan",
+        "imagePath": "data/register/images/Rohan/Rohan-5.png"
+    },
+    {
+        "empId": "567",
+        "empName": "Rajkumar",
+        "imagePath": "data/register/images/Rajkumar/RajKumar-1.png"
+    },
+    {
+        "empId": "789",
+        "empName": "Soumya",
+        "imagePath": "data/register/images/Soumya/Soumya-1.png"
+    }
+]
