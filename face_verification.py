@@ -4,7 +4,7 @@ import time
 from datetime import datetime
 from utils.milvus_ops import MilvusOps
 from config import FACE_DETECTION_MODEL_TYPE, MILVUS_COLLECTION_NAME, MILVUS_DISTANCE_THRESHOLD, \
-                VERIFY_VIDEOSTREAM_LOC, USE_ALIGNMENT, PROCESSED_IMG_VERIFY_SAVE_LOC
+                VERIFY_VIDEOSTREAM_LOC, USE_ALIGNMENT, PROCESSED_IMG_VERIFY_SAVE_LOC, PROCESSED_VIDEO_VERIFY_SAVE_LOC
 from utils.vectorize_image import faceimg_to_embs
 from utils.detect_faces import extract_faces
 from utils.face_align import align_face
@@ -18,6 +18,7 @@ def user_search(img_frame, milvus_ops, model_type):
     if(is_face_found):
         cv2.imwrite(f"{PROCESSED_IMG_VERIFY_SAVE_LOC}/face_detected_{model_type}.jpg", cropped_img)
         face_box = face_boxes[0] # Multiple faces can also be found
+        return None, face_box
         if(USE_ALIGNMENT):
             cropped_img = align_face(img_frame, face_box)
 
@@ -30,7 +31,7 @@ def user_search(img_frame, milvus_ops, model_type):
 
         ### User Vector Search
         response = milvus_ops.vector_search(face_vector)
-        print("response: ", response)
+        # print("response: ", response)
         result = response[0]
         distance = result.distances[0]
         if(distance < MILVUS_DISTANCE_THRESHOLD):
@@ -52,32 +53,78 @@ def run_process():
         is_webcam = True
         vs = WebcamVideoStream(src=0).start()
     else:
-        vs = FileVideoStream(VERIFY_VIDEOSTREAM_LOC).start()
+        # vs = FileVideoStream(VERIFY_VIDEOSTREAM_LOC).start()
+        vs = cv2.VideoCapture(VERIFY_VIDEOSTREAM_LOC)
+        frame_width = int(vs.get(cv2.CAP_PROP_FRAME_WIDTH))
+        frame_height = int(vs.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        frame_rate = vs.get(cv2.CAP_PROP_FPS)
+        print("frame rate: ", frame_rate)
+        duration = 15
+        total_frames = int(frame_rate * duration)
+    # We need to check if camera
+    # is opened previously or not
+    # if (vs.isOpened() == False):
+    #     print("Error reading video file")
 
+    # We need to set resolutions.
+    # so, convert them from float to integer.
+    # frame_width = 840#int(vs.get(3))
+    # frame_height = 480#int(vs.get(4))
+    # size = (frame_width, frame_height)
+
+    # Below VideoWriter object will create
+    # a frame of above defined The output
+    # is stored in 'filename.avi' file.
+    reg_video_name = VERIFY_VIDEOSTREAM_LOC.split('/')[-1].split('.')[0]
+    verify_video_name = f"{PROCESSED_VIDEO_VERIFY_SAVE_LOC}/{reg_video_name}_verify.mp4"
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(verify_video_name, fourcc, 30, (frame_width, frame_height))
+
+    # out = cv2.VideoWriter(verify_video_name,
+    #                         cv2.VideoWriter_fourcc(*'mp4'),
+    #                         10, (640, 480))
+    # out = cv2.VideoWriter(f"{PROCESSED_VIDEO_VERIFY_SAVE_LOC}/{video_name}.mp4", fourcc, 20.0, (640,480))
     font = cv2.FONT_HERSHEY_SIMPLEX
     color = (0, 0, 255)
     thickness = 2 #(try differnt values)
     fontScale = 1 #(try differnt values)
+    # fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     print("> Video/Camera Processing on...")
-    time.sleep(3) # To avoid initial blurred frames
-    while(vs.more()):
+    time.sleep(2) # To avoid initial blurred frames
+    frame_count = 0
+    while(True):
         t1 = datetime.now()
-        frame = vs.read()
+        ret, frame = vs.read()
+        if(ret == False):# or frame_count < total_frames):
+            break
+        frame_count+=1
         if(frame is None):
             print(">> frame is None...")
             pass
-        frame = cv2.flip(frame, 1) # Flip to act as a mirror
-        response, face_box = user_search(frame, milvus_ops, model_type=FACE_DETECTION_MODEL_TYPE) # model_type = ['cascade', 'mtcnn']
+        # frame = cv2.flip(frame, 1) # Flip to act as a mirror
+        # out.write(frame)
+        # cv2.imshow("Video Stream: ", frame)
+        # continue
+        try:
+            response, face_box = user_search(frame, milvus_ops, model_type=FACE_DETECTION_MODEL_TYPE) # model_type = ['cascade', 'mtcnn']
+            if(face_box is not None):
+                response = {
+                    'empName': 'Rohan',
+                    'empId': 'EP0112'
+                }
+        except:
+            continue
         if(response is not None or face_box is not None):
             (x, y, w, h) = face_box
             x, y, w, h = int(x), int(y), int(w), int(h)
             cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 255), 2)
             org = (x, y)
-            label = f"{response['empName']}__{response['distance']}"
+            label = f"{response['empName']}___{response['empId']}"#__{response['distance']}"
             cv2.putText(frame, label, org, font,
                             fontScale, color, thickness, cv2.LINE_AA)
-            print(f"response: {response} in {datetime.now()-t1}S")
-        cv2.imshow("Video Stream: ", frame)
+            # print(f"response: {response} in {datetime.now()-t1}S")
+        # cv2.imshow("Video Stream: ", frame)
+        out.write(frame)
         if(cv2.waitKey(1) & 0xFF == ord('q')):
             print("Quitting...")
             break
@@ -86,7 +133,8 @@ def run_process():
     print('-'*10)
 
     # Destroy all the windows
-    vs.stop()
+    vs.release()
+    out.release()
     cv2.destroyAllWindows()
     milvus_ops.close_connection()
 
