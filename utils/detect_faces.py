@@ -30,7 +30,7 @@ mtcnn = MTCNN(
 
 def extract_faces_cascade(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    face_boxes = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(64, 64))
+    face_boxes = face_cascade.detectMultiScale(gray, scaleFactor=1.2, minNeighbors=10, minSize=(64, 64))
                                             # gray,scaleFactor=1.2,minNeighbors=10,minSize=(64,64),flags=cv2.CASCADE_SCALE_IMAGE)
     no_of_faces = len(face_boxes)
     is_face_found = False

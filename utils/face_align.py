@@ -4,6 +4,7 @@ import numpy as np
 import dlib
 from utils.facealigner import FaceAligner
 from config import SHAPE_PREDICTOR_MODEL_LOC
+from utils.face_utils import crop_face
 
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(SHAPE_PREDICTOR_MODEL_LOC)

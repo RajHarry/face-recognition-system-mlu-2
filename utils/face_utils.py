@@ -12,3 +12,13 @@ def bb_to_rect(bb):
     right=bb[0]+bb[2]
     bottom=bb[1]+bb[3]
     return np.array([top, right, bottom, left])
+
+def crop_face(image, top_edge_point, left_edge_point, right_edge_point, bottom_edge_point):
+    # Define the new bounding box for the face crop
+    top_left = (left_edge_point[0], top_edge_point[1])
+    bottom_right = (right_edge_point[0], bottom_edge_point[1])
+
+    # Crop the face region
+    cropped_face = image[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
+
+    return cropped_face

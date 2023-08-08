@@ -4,3 +4,4 @@ Pipfile.lock
 __pycache__
 data/models_artifactory/*
 data/raw-videos/*
+data/processed/*
